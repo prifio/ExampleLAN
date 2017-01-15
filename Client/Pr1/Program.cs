@@ -4,16 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
-using System.Net.Sockets;
+//using System.Net.Sockets;
 using System.Net;
-
+using Sockets.Plugin;
 
 namespace ConsoleApplication1
 {
     class Client
     {
-        private Socket SocketReceive;
-        public Task<int> TryReceiveAsync(byte[] buffer, int offset, int size, SocketFlags flags)
+        private TcpSocketClient SocketReceive;
+        /*public Task<int> TryReceiveAsync(byte[] buffer, int offset, int size, SocketFlags flags)
         {
             TaskCompletionSource<int> tcs = new TaskCompletionSource<int>();
             SocketReceive.BeginReceive(buffer, offset, size, flags, iar =>
@@ -21,21 +21,21 @@ namespace ConsoleApplication1
                 tcs.SetResult(SocketReceive.EndReceive(iar));
             }, SocketReceive);
             return tcs.Task;
-        }
+        }*/
         public async Task<string> ReceiveAsync()
         {
             int size = 0;
             byte[] data = new byte[1024];
             while (true)
             {
-                var received = await TryReceiveAsync(data, size, 1024 - size, SocketFlags.None);
+                var received = await SocketReceive.ReadStream.ReadAsync(data, size, 1024 - size);//TryReceiveAsync(data, size, 1024 - size, SocketFlags.None);
                 size += received;
                 if (data[size - 1] == '\n')
                     return Encoding.ASCII.GetString(data, 0, size - 1);
                 Console.WriteLine(received);
             }
         }
-        public Task<int> TrySendAsync(byte[] buffer, int offset, int size, SocketFlags flags)
+        /*public Task<int> TrySendAsync(byte[] buffer, int offset, int size, SocketFlags flags)
         {
             TaskCompletionSource<int> tcs = new TaskCompletionSource<int>();
             SocketReceive.BeginSend(buffer, offset, size, flags, iar =>
@@ -44,6 +44,7 @@ namespace ConsoleApplication1
             }, SocketReceive);
             return tcs.Task;
         }
+        */
         public async Task SendAsync(string s)
         {
             byte[] data = Encoding.ASCII.GetBytes(s + "\n");
@@ -51,16 +52,13 @@ namespace ConsoleApplication1
             int left = data.Length;
             while (left > 0)
             {
-                var sended = await TrySendAsync(data, itt, left, SocketFlags.None);
-                itt += sended;
-                left -= sended;
+                await SocketReceive.WriteStream.WriteAsync(data, itt, left);// TrySendAsync(data, itt, left, SocketFlags.None);
+                left = 0;
             }
         }
-        public Task connect(string IP)
+        public async Task connect(string IP)
         {
-            IPEndPoint ip = new IPEndPoint(IPAddress.Parse(IP), 11000);
-            return Task.Factory.FromAsync(
-                SocketReceive.BeginConnect(ip, null, SocketReceive), SocketReceive.EndConnect);
+            await SocketReceive.ConnectAsync(IP, 11000);
         }
         public async Task InfReceive()
         {
@@ -81,20 +79,20 @@ namespace ConsoleApplication1
         }
         public Client()
         {
-            SocketReceive = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            SocketReceive = new TcpSocketClient();
         }
     }
 
     class A
     {
-        const string IP = "192.168.2.220";
+        const string IP = "127.0.0.1";
         public async Task run()
         {
             Client client = new Client();
             await client.connect(IP);
             Console.WriteLine("endConnect");
             client.InfReceive();
-            //await client.InfSend();
+            await client.InfSend();
         }
     }
 

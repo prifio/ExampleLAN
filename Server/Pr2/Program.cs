@@ -94,7 +94,7 @@ namespace ConsoleApplication1
 
     class A
     {
-        const string IP = "192.168.2.220";
+        const string IP = "127.0.0.1";
         public async Task run()
         {
             Server server = new Server();
